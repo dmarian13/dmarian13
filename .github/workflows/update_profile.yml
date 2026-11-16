@@ -1,0 +1,46 @@
+name: Update Profile Card
+
+on:
+  schedule:
+    # 22:00 UTC = 00:00 EET (Romania winter time; 01:00 EEST in summer)
+    - cron: "0 22 * * *"
+  workflow_dispatch:
+  push:
+    paths:
+      - "scripts/generate_profile_card.py"
+      - "assets/github_photo.png"
+      - ".github/workflows/update_profile.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Pillow
+        run: pip install pillow
+
+      - name: Generate profile_card.svg
+        env:
+          INPUT_PNG: assets/github_photo.png
+          OUTPUT_SVG: profile_card.svg
+          GITHUB_USER: ${{ github.repository_owner }}
+          LINKEDIN_URL: https://www.linkedin.com/in/marian-diaconescu-3a951726a/
+          LINKEDIN_SHORT: in/marian-diaconescu
+          GH_STATS_TOKEN: ${{ secrets.GH_STATS_TOKEN }}
+        run: python3 scripts/generate_profile_card.py
+
+      - name: Commit updated SVG
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add profile_card.svg
+          git diff --cached --quiet || git commit -m "chore: update live profile stats"
+          git push
